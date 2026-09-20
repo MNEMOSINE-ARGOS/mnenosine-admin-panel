@@ -1,103 +1,54 @@
 <template>
-  <UTable
-    :data="data ?? []"
-    :columns="columns"
-    :loading="status === 'pending'"
-    :ui="{ th: 'px-3 py-2', td: 'px-3 py-2' }"
-  >
-    <template #descripcion-cell="{ row }">
-      <span
-        v-if="row.original.descripcion"
-        class="block max-w-64 truncate"
-        :title="row.original.descripcion"
-      >
-        {{ row.original.descripcion }}
-      </span>
-    </template>
+  <div class="space-y-4">
+    <UInput
+      v-model="busqueda"
+      icon="i-lucide-search"
+      placeholder="Buscar por cliente prospecto..."
+      class="w-full sm:w-90"
+    />
 
-    <template #instruccion_reporte-cell="{ row }">
-      <span
-        v-if="row.original.instruccion_reporte"
-        class="block max-w-64 truncate"
-        :title="row.original.instruccion_reporte"
-      >
-        {{ row.original.instruccion_reporte }}
-      </span>
-    </template>
+    <SeccionColapsable
+      titulo="Reportes automáticos activados"
+      icon="i-lucide-send"
+      icon-class="size-6 text-green-50"
+      header-class="bg-emerald-700 text-white"
+      class="mt-5"
 
-    <template #activo-cell="{ row }">
-      <UBadge
-        :color="row.original.activo ? 'success' : 'neutral'"
-        variant="subtle"
-      >
-        {{ row.original.activo ? 'Activo' : 'Inactivo' }}
-      </UBadge>
-    </template>
+      floating
+      default-open
+    >
+      <p class="mb-4 text-sm text-muted">
+        Estos reportes están activos para envíos automáticos de correo y WhatsApp.
+      </p>
 
-    <template #acciones-cell="{ row }">
-      <UButton
-        icon="i-lucide-pencil"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        aria-label="Editar reporte"
-        @click="emit('editar', row.original)"
+      <TablaReportePdfBase
+        :filas="automaticos"
+        :loading="status === 'pending'"
+        @editar="reporte => emit('editar', reporte)"
+        @eliminado="refresh"
       />
-    </template>
+    </SeccionColapsable>
 
-    <template #descargar_pdf-cell="{ row }">
-      <div class="flex gap-1">
-        <UButton
-          icon="i-lucide-monitor"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          aria-label="Descargar PDF para escritorio"
-          :loading="estaDescargando(row.original, 'escritorio')"
-          @click="descargar(row.original, 'escritorio')"
-        />
-        <UButton
-          icon="i-lucide-smartphone"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          aria-label="Descargar PDF para celular"
-          :loading="estaDescargando(row.original, 'movil')"
-          @click="descargar(row.original, 'movil')"
-        />
-      </div>
-    </template>
-
-    <template #eliminar-cell="{ row }">
-      <UButton
-        icon="i-lucide-trash-2"
-        size="xs"
-        color="error"
-        variant="ghost"
-        aria-label="Eliminar reporte"
-        :loading="borrandoId === row.original.id"
-        @click="confirmarBorrado(row.original)"
+    <SeccionColapsable
+      titulo="Tabla general de actores y reportes"
+      icon="i-lucide-table"
+      icon-class="size-6 text-blue-50"
+      header-class="bg-mist-800 text-white"
+      class="mt-10"
+      floating
+      default-open
+    >
+      <TablaReportePdfBase
+        :filas="generales"
+        :loading="status === 'pending'"
+        @editar="reporte => emit('editar', reporte)"
+        @eliminado="refresh"
       />
-    </template>
-
-    <template #enviar-cell="{ row }">
-      <UButton
-        icon="i-lucide-send"
-        size="xs"
-        color="primary"
-        variant="ghost"
-        aria-label="Enviar reporte al cliente"
-        @click="abrirConfirmarEnvio(row.original)"
-      />
-    </template>
-  </UTable>
-
-  <ConfirmarEnvioReporte v-model:open="modalEnviarAbierto" :reporte="reporteEnviando" />
+    </SeccionColapsable>
+  </div>
 </template>
 
 <script lang="ts" setup>
-import type { TableColumn } from '@nuxt/ui'
-
 interface ReportePdf {
   id: number
   cliente_propsecto: string
@@ -117,76 +68,27 @@ const emit = defineEmits<{
 
 const { data, refresh, status } = useFetch<ReportePdf[]>('/api/reporte_pdf')
 
-type TipoDescarga = 'escritorio' | 'movil'
+const busqueda = ref('')
 
-const toast = useToast()
-const descargando = ref<{ id: number, tipo: TipoDescarga } | null>(null)
-const borrandoId = ref<number | null>(null)
-const modalEnviarAbierto = ref(false)
-const reporteEnviando = ref<ReportePdf | null>(null)
-
-const columns: TableColumn<ReportePdf>[] = [
-  { id: 'acciones', header: '' },
-  { accessorKey: 'activo', header: 'Activo' },
-  { id: 'descargar_pdf', header: 'Descargar PDF' },
-  { accessorKey: 'cliente_propsecto', header: 'Cliente prospecto' },
-  { accessorKey: 'descripcion', header: 'Descripción' },
-  { accessorKey: 'nombre_actor', header: 'Nombre del actor' },
-  { accessorKey: 'tipo_reporte', header: 'Tipo de reporte' },
-  { accessorKey: 'instruccion_reporte', header: 'Instrucción' },
-  { accessorKey: 'correo', header: 'Correo' },
-  { accessorKey: 'whatsapp', header: 'WhatsApp' },
-  { accessorKey: 'caducidad', header: 'Caducidad' },
-  { id: 'eliminar', header: 'Eliminar' },
-  { id: 'enviar', header: 'Enviar' }
-]
-
-function estaDescargando(reporte: ReportePdf, tipo: TipoDescarga) {
-  return descargando.value?.id === reporte.id && descargando.value?.tipo === tipo
+function esAutomatico(reporte: ReportePdf) {
+  return !!reporte.tipo_reporte?.toLowerCase().includes('aut-') && !!reporte.activo
 }
 
-async function descargar(reporte: ReportePdf, tipo: TipoDescarga) {
-  descargando.value = { id: reporte.id, tipo }
-
-  try {
-    const blob = await $fetch<Blob>(`/api/reporte_pdf/${reporte.id}/descargar`, { query: { tipo }, responseType: 'blob' })
-    const url = URL.createObjectURL(blob)
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = `reporte_${reporte.id}.pdf`
-    enlace.click()
-    URL.revokeObjectURL(url)
-  } catch {
-    toast.add({ title: 'No se pudo generar el PDF, intenta de nuevo', color: 'error' })
-  } finally {
-    descargando.value = null
-  }
+function ordenAlfabetico(a: ReportePdf, b: ReportePdf) {
+  return a.cliente_propsecto.localeCompare(b.cliente_propsecto, 'es', { sensitivity: 'base' })
 }
 
-function confirmarBorrado(reporte: ReportePdf) {
-  // eslint-disable-next-line no-alert
-  if (!confirm(`¿Eliminar el reporte de "${reporte.cliente_propsecto}"? Esta acción no se puede deshacer.`)) return
-  borrar(reporte)
-}
+const filtrados = computed(() => {
+  const busquedaNormalizada = busqueda.value.trim().toLowerCase()
+  const filas = data.value ?? []
 
-function abrirConfirmarEnvio(reporte: ReportePdf) {
-  reporteEnviando.value = reporte
-  modalEnviarAbierto.value = true
-}
+  if (!busquedaNormalizada) return filas
 
-async function borrar(reporte: ReportePdf) {
-  borrandoId.value = reporte.id
+  return filas.filter(reporte => reporte.cliente_propsecto.toLowerCase().includes(busquedaNormalizada))
+})
 
-  try {
-    await $fetch(`/api/reporte_pdf/${reporte.id}`, { method: 'DELETE' })
-    toast.add({ title: 'Reporte eliminado', color: 'success' })
-    refresh()
-  } catch {
-    toast.add({ title: 'No se pudo eliminar el reporte, intenta de nuevo', color: 'error' })
-  } finally {
-    borrandoId.value = null
-  }
-}
+const automaticos = computed(() => filtrados.value.filter(esAutomatico).sort(ordenAlfabetico))
+const generales = computed(() => filtrados.value.filter(reporte => !esAutomatico(reporte)).sort(ordenAlfabetico))
 
 defineExpose({ refresh })
 </script>

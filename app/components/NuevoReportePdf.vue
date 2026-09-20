@@ -61,7 +61,7 @@
 <script lang="ts" setup>
 import type { FormSubmitEvent } from '@nuxt/ui'
 
-const TIPOS_REPORTE = ['general', 'facebook', 'semanal automático' , 'prueba']
+const TIPOS_REPORTE = ['general', 'facebook','lunes7am aut-gen','sabado8:30am aut-gen', 'prueba']
 
 interface ReportePdf {
   id: number

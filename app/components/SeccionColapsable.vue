@@ -1,9 +1,14 @@
 <template>
-  <UCard variant="subtle" :ui="{ body: 'p-0 sm:p-0' }">
+  <UCard
+    variant="subtle"
+    :ui="{ body: 'p-0 sm:p-0' }"
+    :class="floating ? 'shadow-lg ring-1 ring-default/60 transition-shadow hover:shadow-xl' : undefined"
+  >
     <UCollapsible v-model:open="abierto">
       <button
         type="button"
-        class="flex w-full items-center justify-between gap-2 p-4 sm:p-6 text-left"
+        class="flex w-full items-center justify-between gap-2 rounded-t-lg p-4 sm:p-6 text-left"
+        :class="headerClass"
       >
         <div class="flex items-center gap-2">
           <div v-if="icon" class="flex items-center justify-center rounded-md" :class="iconWrapperClass">
@@ -33,8 +38,10 @@ const props = withDefaults(defineProps<{
   icon?: string
   iconClass?: string
   iconWrapperClass?: string
+  headerClass?: string
+  floating?: boolean
   defaultOpen?: boolean
-}>(), { defaultOpen: false })
+}>(), { defaultOpen: false, floating: false })
 
 const abierto = ref(props.defaultOpen)
 </script>
