@@ -44,12 +44,19 @@ export default defineEventHandler(async (event) => {
       body: formData,
       signal: controller.signal
     }).finally(() => clearTimeout(timeout))
-  } catch {
+  } catch (error) {
+    console.error('[medios-tradicionales/impresos] error de red al llamar al webhook de n8n', error)
     throw createError({ statusCode: 502, statusMessage: 'No se pudo enviar el medio impreso, intenta de nuevo' })
   }
 
   if (!respuesta.ok) {
-    throw createError({ statusCode: 502, statusMessage: 'No se pudo enviar el medio impreso, intenta de nuevo' })
+    const cuerpo = await respuesta.text().catch(() => '')
+    console.error(`[medios-tradicionales/impresos] el webhook de n8n respondió ${respuesta.status}: ${cuerpo}`)
+    throw createError({
+      statusCode: 502,
+      statusMessage: 'No se pudo enviar el medio impreso, intenta de nuevo',
+      data: { n8nStatus: respuesta.status, n8nBody: cuerpo }
+    })
   }
 
   return { ok: true }

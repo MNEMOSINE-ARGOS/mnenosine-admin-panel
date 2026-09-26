@@ -10,14 +10,25 @@
     </template>
 
     <template #acciones-cell="{ row }">
-      <UButton
-        icon="i-lucide-pencil"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        aria-label="Editar medio"
-        @click="emit('editar', row.original)"
-      />
+      <div class="flex gap-1">
+        <UButton
+          icon="i-lucide-pencil"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          aria-label="Editar medio"
+          @click="emit('editar', row.original)"
+        />
+        <UButton
+          icon="i-lucide-trash-2"
+          size="xs"
+          color="error"
+          variant="ghost"
+          aria-label="Eliminar medio"
+          :loading="borrandoId === row.original.id"
+          @click="confirmarBorrado(row.original)"
+        />
+      </div>
     </template>
   </UTable>
 </template>
@@ -36,6 +47,9 @@ const emit = defineEmits<{
   editar: [medio: Medio]
 }>()
 
+const toast = useToast()
+const borrandoId = ref<number | null>(null)
+
 const { data, refresh, status } = useFetch<Medio[]>('/api/lista-medios')
 
 const columns: TableColumn<Medio>[] = [
@@ -44,6 +58,26 @@ const columns: TableColumn<Medio>[] = [
   { accessorKey: 'detalles', header: 'Detalle' },
   { accessorKey: 'created_at', header: 'Creado' }
 ]
+
+function confirmarBorrado(medio: Medio) {
+  // eslint-disable-next-line no-alert
+  if (!confirm(`¿Eliminar el medio "${medio.medio}"? Esta acción no se puede deshacer.`)) return
+  borrar(medio)
+}
+
+async function borrar(medio: Medio) {
+  borrandoId.value = medio.id
+
+  try {
+    await $fetch(`/api/lista-medios/${medio.id}`, { method: 'DELETE' })
+    toast.add({ title: 'Medio eliminado', color: 'success' })
+    await refresh()
+  } catch {
+    toast.add({ title: 'No se pudo eliminar el medio, intenta de nuevo', color: 'error' })
+  } finally {
+    borrandoId.value = null
+  }
+}
 
 defineExpose({ refresh, data })
 </script>

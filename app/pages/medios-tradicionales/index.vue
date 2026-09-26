@@ -48,6 +48,8 @@
           <UFileUpload
             v-model="archivosImpresos"
             multiple
+            layout="list"
+            :file-image="false"
             accept="application/pdf"
             size="sm"
             label="Arrastra tus PDFs aquí"
@@ -235,7 +237,12 @@ async function enviarImpresos(event: FormSubmitEvent<any>) {
     stateImpresos.fecha = hoy()
     archivosImpresos.value = []
   } catch (error: any) {
-    toast.add({ title: error?.statusMessage ?? 'No se pudo enviar el medio impreso', color: 'error' })
+    const detalleN8n = error?.data?.data?.n8nBody
+    toast.add({
+      title: error?.statusMessage ?? 'No se pudo enviar el medio impreso',
+      description: detalleN8n ? `n8n (${error.data.data.n8nStatus}): ${detalleN8n}` : undefined,
+      color: 'error'
+    })
   } finally {
     enviandoImpresos.value = false
   }
