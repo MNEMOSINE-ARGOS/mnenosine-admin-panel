@@ -15,7 +15,29 @@
         @submit="enviarImpresos"
       >
         <UFormField label="Medio" name="medio" required>
-          <UInput v-model="stateImpresos.medio" class="w-full" />
+          <USelectMenu
+            v-model="stateImpresos.medio"
+            :items="opcionesMedios"
+            value-key="value"
+            placeholder="Selecciona un medio"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField label="Tipo de medio" required>
+          <USelect v-model="tipoMedioImpresoSeleccion" :items="['Periódico', 'Impreso general', 'Revista', 'Libre']" class="w-full sm:w-64" />
+        </UFormField>
+
+        <UFormField v-if="tipoMedioImpresoSeleccion === 'Libre'" label="Especifica el tipo de medio" name="tipo_medio" required>
+          <UInput v-model="tipoMedioImpresoLibre" placeholder="Ej. Suplemento, Boletín..." class="w-full sm:w-64" />
+        </UFormField>
+
+        <UFormField
+          label="Detalle"
+          name="detalle"
+          description="En este campo puede dar instrucciones o datos de los reporteros o estructura del medio, impreso o programa del que trata, para poder entender el contexto en la carga de los datos."
+        >
+          <UTextarea v-model="stateImpresos.detalle" :rows="2" class="w-full" />
         </UFormField>
 
         <UFormField label="Fecha" name="fecha" required>
@@ -27,6 +49,7 @@
             v-model="archivosImpresos"
             multiple
             accept="application/pdf"
+            size="sm"
             label="Arrastra tus PDFs aquí"
             description="O haz clic para seleccionarlos"
             class="w-full"
@@ -54,7 +77,7 @@
         @submit="enviarTvRadio"
       >
         <UFormField label="Tipo de medio" required>
-          <USelect v-model="tipoMedioSeleccion" :items="['TV', 'Radio', 'Libre']" class="w-full sm:w-48" />
+          <USelect v-model="tipoMedioSeleccion" :items="['TV', 'Radio', 'Impreso', 'Libre']" class="w-full sm:w-48" />
         </UFormField>
 
         <UFormField v-if="tipoMedioSeleccion === 'Libre'" label="Especifica el tipo de medio" name="tipo_medio" required>
@@ -62,11 +85,21 @@
         </UFormField>
 
         <UFormField label="Medio o programa" name="medio_programa" required>
-          <UInput v-model="stateTvRadio.medio_programa" class="w-full" />
+          <USelectMenu
+            v-model="stateTvRadio.medio_programa"
+            :items="opcionesMedios"
+            value-key="value"
+            placeholder="Selecciona un medio"
+            class="w-full"
+          />
         </UFormField>
 
-        <UFormField label="Detalle de reporteros" name="detalle_reporteros">
-          <UTextarea v-model="stateTvRadio.detalle_reporteros" :rows="2" class="w-full" />
+        <UFormField
+          label="Detalle"
+          name="detalle"
+          description="En este campo puede dar instrucciones o datos de los reporteros o estructura del medio, impreso o programa del que trata, para poder entender el contexto en la carga de los datos."
+        >
+          <UTextarea v-model="stateTvRadio.detalle" :rows="2" class="w-full" />
         </UFormField>
 
         <UFormField label="Fecha de emisión" name="fecha_emision" required>
@@ -93,11 +126,38 @@
         </div>
       </UForm>
     </SeccionColapsable>
+
+    <SeccionColapsable titulo="Lista de medios" icon="i-lucide-list">
+      <div class="space-y-4">
+        <div class="flex justify-end">
+          <UButton
+            label="Agregar medio"
+            icon="i-lucide-plus"
+            @click="medioEnEdicion = null; modalMedioAbierto = true"
+          />
+        </div>
+
+        <TablaListaMedios ref="tablaListaMediosRef" @editar="medioEnEdicion = $event; modalMedioAbierto = true" />
+      </div>
+    </SeccionColapsable>
+
+    <NuevoMedio
+      v-model:open="modalMedioAbierto"
+      :medio="medioEnEdicion"
+      @guardado="refrescarCatalogo(); tablaListaMediosRef?.refresh()"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
 import type { FormSubmitEvent } from '@nuxt/ui'
+
+interface Medio {
+  id: number
+  medio: string
+  detalles: string | null
+  created_at: string
+}
 
 function hoy() {
   return new Date().toISOString().slice(0, 10)
@@ -105,11 +165,47 @@ function hoy() {
 
 const toast = useToast()
 
+const { data: catalogoMedios, refresh: refrescarCatalogo } = useFetch<Medio[]>('/api/lista-medios')
+
+const opcionesMedios = computed(() => {
+  return (catalogoMedios.value ?? []).map(m => ({ label: m.medio, value: m.medio }))
+})
+
+const catalogoDetalles = computed(() => {
+  return new Map((catalogoMedios.value ?? []).map(m => [m.medio, m.detalles ?? '']))
+})
+
+const modalMedioAbierto = ref(false)
+const medioEnEdicion = ref<Medio | null>(null)
+const tablaListaMediosRef = ref()
+
 const schemaImpresos = useZodSchemas().mediosTradicionales.impresos
-const stateImpresos = reactive<{ medio?: string, fecha: string }>({ medio: undefined, fecha: hoy() })
+const stateImpresos = reactive<{ medio?: string, tipo_medio?: string, detalle?: string, fecha: string }>({
+  medio: undefined,
+  tipo_medio: undefined,
+  detalle: undefined,
+  fecha: hoy()
+})
 const archivosImpresos = ref<File[]>([])
 const enviandoImpresos = ref(false)
 const formImpresosRef = ref()
+
+const tipoMedioImpresoSeleccion = ref<'Periódico' | 'Impreso general' | 'Revista' | 'Libre' | undefined>(undefined)
+const tipoMedioImpresoLibre = ref<string | undefined>(undefined)
+
+watch(tipoMedioImpresoSeleccion, (seleccion) => {
+  if (seleccion !== 'Libre') {
+    tipoMedioImpresoLibre.value = undefined
+  }
+})
+
+watch([tipoMedioImpresoSeleccion, tipoMedioImpresoLibre], ([seleccion, libre]) => {
+  stateImpresos.tipo_medio = seleccion === 'Libre' ? libre : seleccion
+})
+
+watch(() => stateImpresos.medio, (medio) => {
+  stateImpresos.detalle = medio ? catalogoDetalles.value.get(medio) ?? '' : undefined
+})
 
 async function enviarImpresos(event: FormSubmitEvent<any>) {
   if (archivosImpresos.value.length === 0) {
@@ -122,6 +218,8 @@ async function enviarImpresos(event: FormSubmitEvent<any>) {
   try {
     const formData = new FormData()
     formData.append('medio', event.data.medio)
+    formData.append('tipo_medio', event.data.tipo_medio)
+    formData.append('detalle', event.data.detalle ?? '')
     formData.append('fecha', event.data.fecha)
     for (const archivo of archivosImpresos.value) {
       formData.append('archivos', archivo)
@@ -131,6 +229,9 @@ async function enviarImpresos(event: FormSubmitEvent<any>) {
 
     toast.add({ title: 'Medio impreso enviado', color: 'success' })
     stateImpresos.medio = undefined
+    tipoMedioImpresoSeleccion.value = undefined
+    tipoMedioImpresoLibre.value = undefined
+    stateImpresos.detalle = undefined
     stateImpresos.fecha = hoy()
     archivosImpresos.value = []
   } catch (error: any) {
@@ -144,15 +245,21 @@ const schemaTvRadio = useZodSchemas().mediosTradicionales.tvRadio
 const stateTvRadio = reactive<{
   tipo_medio?: string
   medio_programa?: string
-  detalle_reporteros?: string
+  detalle?: string
   fecha_emision: string
   texto?: string
-}>({ tipo_medio: undefined, medio_programa: undefined, detalle_reporteros: undefined, fecha_emision: hoy(), texto: undefined })
+}>({
+  tipo_medio: undefined,
+  medio_programa: undefined,
+  detalle: undefined,
+  fecha_emision: hoy(),
+  texto: undefined
+})
 const archivoTexto = ref<File | null>(null)
 const enviandoTvRadio = ref(false)
 const formTvRadioRef = ref()
 
-const tipoMedioSeleccion = ref<'TV' | 'Radio' | 'Libre' | undefined>(undefined)
+const tipoMedioSeleccion = ref<'TV' | 'Radio' | 'Impreso' | 'Libre' | undefined>(undefined)
 const tipoMedioLibre = ref<string | undefined>(undefined)
 
 watch(tipoMedioSeleccion, (seleccion) => {
@@ -163,6 +270,10 @@ watch(tipoMedioSeleccion, (seleccion) => {
 
 watch([tipoMedioSeleccion, tipoMedioLibre], ([seleccion, libre]) => {
   stateTvRadio.tipo_medio = seleccion === 'Libre' ? libre : seleccion
+})
+
+watch(() => stateTvRadio.medio_programa, (medio) => {
+  stateTvRadio.detalle = medio ? catalogoDetalles.value.get(medio) ?? '' : undefined
 })
 
 function cargarArchivoTexto() {
@@ -186,7 +297,7 @@ async function enviarTvRadio(event: FormSubmitEvent<any>) {
     tipoMedioSeleccion.value = undefined
     tipoMedioLibre.value = undefined
     stateTvRadio.medio_programa = undefined
-    stateTvRadio.detalle_reporteros = undefined
+    stateTvRadio.detalle = undefined
     stateTvRadio.fecha_emision = hoy()
     stateTvRadio.texto = undefined
     archivoTexto.value = null

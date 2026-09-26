@@ -28,6 +28,8 @@ export default defineEventHandler(async (event) => {
 
   const formData = new FormData()
   formData.append('medio', resultado.data.medio)
+  formData.append('tipo_medio', resultado.data.tipo_medio)
+  formData.append('detalle', resultado.data.detalle ?? '')
   formData.append('fecha', resultado.data.fecha)
   for (const archivo of archivos) {
     formData.append('archivos', new Blob([new Uint8Array(archivo.data)], { type: archivo.type }), archivo.filename)
