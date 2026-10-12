@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center gap-2">
-      <UIcon v-if="icon" :name="icon" class="size-6 text-primary" />
+      <UIcon v-if="icon" :name="icon" class="size-6" :class="iconClass" />
       <h1 class="text-2xl font-bold">
         {{ titulo }}
       </h1>
@@ -13,9 +13,10 @@
 </template>
 
 <script lang="ts" setup>
-defineProps<{
+withDefaults(defineProps<{
   titulo: string
   subtitulo?: string
   icon?: string
-}>()
+  iconClass?: string
+}>(), { iconClass: 'text-primary' })
 </script>

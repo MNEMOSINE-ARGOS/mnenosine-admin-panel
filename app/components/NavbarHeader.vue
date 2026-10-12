@@ -28,6 +28,7 @@ const links = [
   { to: '/temas', label: 'Temas', icon: 'i-lucide-tag' },
   { to: '/bots', label: 'Bots', icon: 'i-lucide-bot' },
   { to: '/reporte_pdf', label: 'Reporte PDF', icon: 'i-lucide-file-text' },
+  { to: '/reportes-tematicos', label: 'Reportes Temáticos', icon: 'i-lucide-file-chart-column' },
   { to: '/social-media', label: 'Social Media', icon: 'i-lucide-share-2' },
   { to: '/medios-tradicionales', label: 'Medios Tradicionales', icon: 'i-lucide-newspaper' }
 ]

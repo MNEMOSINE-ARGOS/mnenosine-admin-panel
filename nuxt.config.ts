@@ -25,6 +25,7 @@ export default defineNuxtConfig({
         'lucide:layout-dashboard',
         'lucide:log-out',
         'lucide:file-text',
+        'lucide:file-chart-column',
         'lucide:download',
         'lucide:monitor',
         'lucide:smartphone',
@@ -45,6 +46,9 @@ export default defineNuxtConfig({
         'lucide:x',
         'lucide:calendar',
         'lucide:check',
+        'lucide:circle-check',
+        'lucide:file-down',
+        'lucide:arrow-right',
         'simple-icons:facebook',
         'simple-icons:youtube',
         'simple-icons:tiktok'
